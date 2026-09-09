@@ -57,22 +57,24 @@ Find your optimized images in the `output/` folder.
 
 For each source image, **5 variants** are generated:
 
-| Variant              | Size         | Format | Quality | Notes                      |
-| -------------------- | ------------ | ------ | ------- | -------------------------- |
-| `[name]-2x.avif`     | Original     | AVIF   | 85      | Effort 6                   |
-| `[name]-2x.webp`     | Original     | WebP   | 85      | Effort 6                   |
-| `[name]-1x.avif`     | 50% scaled   | AVIF   | 85      | Effort 6                   |
-| `[name]-1x.webp`     | 50% scaled   | WebP   | 85      | Effort 6                   |
-| `[name]-1x.jpg`      | 50% scaled   | JPEG   | 85      | MozJPEG compression        |
+| Variant              | Width        | Format | Quality | Notes                                    |
+| -------------------- | ------------ | ------ | ------- | ---------------------------------------- |
+| `[name]-2x.avif`     | 1600px       | AVIF   | 65      | Effort 8, no upscale                     |
+| `[name]-2x.webp`     | 1600px       | WebP   | 85      | Effort 6, no upscale                     |
+| `[name]-1x.avif`     | 800px        | AVIF   | 65      | Effort 8, no upscale                     |
+| `[name]-1x.webp`     | 800px        | WebP   | 85      | Effort 6, no upscale                     |
+| `[name]-1x.jpg`      | 800px        | JPEG   | 85      | MozJPEG, no upscale                      |
 
-**Example:** An input file `hero.jpg` (1200×800) produces:
+> Height is calculated automatically to maintain the original aspect ratio. Images smaller than the target width are **not** upscaled (`withoutEnlargement: true`).
+
+**Example:** An input file `hero.jpg` (2400×1600) produces:
 
 ```
-hero-2x.avif   → 1200×800  (AVIF)
-hero-2x.webp   → 1200×800  (WebP)
-hero-1x.avif   →  600×400  (AVIF)
-hero-1x.webp   →  600×400  (WebP)
-hero-1x.jpg    →  600×400  (JPEG)
+hero-2x.avif   → 1600×1067  (AVIF)
+hero-2x.webp   → 1600×1067  (WebP)
+hero-1x.avif   →  800×533   (AVIF)
+hero-1x.webp   →  800×533   (WebP)
+hero-1x.jpg    →  800×533   (JPEG)
 ```
 
 ---

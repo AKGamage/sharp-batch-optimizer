@@ -43,6 +43,13 @@ function cleanOutput() {
   }
 }
 
+// ─── Config ──────────────────────────────────────────────────────────
+
+const TARGET_WIDTH_2X = 1600;
+const TARGET_WIDTH_1X = 800;
+const RESIZE_OPTS_2X = { width: TARGET_WIDTH_2X, withoutEnlargement: true };
+const RESIZE_OPTS_1X = { width: TARGET_WIDTH_1X, withoutEnlargement: true };
+
 // ─── Process a single image ──────────────────────────────────────────
 
 async function processImage(filePath) {
@@ -50,31 +57,28 @@ async function processImage(filePath) {
   const originalSize = fs.statSync(filePath).size;
   const { width, height } = await sharp(filePath).metadata();
 
-  const halfW = Math.round(width / 2);
-  const halfH = Math.round(height / 2);
-
   console.log(`  Processing: ${basename} (${width}×${height}) ...`);
 
   const variants = [
     {
       suffix: '-2x.avif',
-      pipeline: sharp(filePath).resize(width, height).avif({ quality: 85, effort: 6 }),
+      pipeline: sharp(filePath).resize(RESIZE_OPTS_2X).avif({ quality: 65, effort: 8 }),
     },
     {
       suffix: '-2x.webp',
-      pipeline: sharp(filePath).resize(width, height).webp({ quality: 85, effort: 6 }),
+      pipeline: sharp(filePath).resize(RESIZE_OPTS_2X).webp({ quality: 85, effort: 6 }),
     },
     {
       suffix: '-1x.avif',
-      pipeline: sharp(filePath).resize(halfW, halfH).avif({ quality: 85, effort: 6 }),
+      pipeline: sharp(filePath).resize(RESIZE_OPTS_1X).avif({ quality: 65, effort: 8 }),
     },
     {
       suffix: '-1x.webp',
-      pipeline: sharp(filePath).resize(halfW, halfH).webp({ quality: 85, effort: 6 }),
+      pipeline: sharp(filePath).resize(RESIZE_OPTS_1X).webp({ quality: 85, effort: 6 }),
     },
     {
       suffix: '-1x.jpg',
-      pipeline: sharp(filePath).resize(halfW, halfH).jpeg({ quality: 85, mozjpeg: true }),
+      pipeline: sharp(filePath).resize(RESIZE_OPTS_1X).jpeg({ quality: 85, mozjpeg: true }),
     },
   ];
 
