@@ -63,9 +63,9 @@ For each source image, **5 variants** are generated:
 | `[name]-2x.webp`     | 1600px       | WebP   | 85      | Effort 6, no upscale                     |
 | `[name]-1x.avif`     | 800px        | AVIF   | 65      | Effort 8, no upscale                     |
 | `[name]-1x.webp`     | 800px        | WebP   | 85      | Effort 6, no upscale                     |
-| `[name]-1x.jpg`      | 800px        | JPEG   | 85      | MozJPEG, no upscale                      |
+| `[name]-1x.jpg/png`  | 800px        | Auto   | 85      | JPG (MozJPEG) or PNG based on alpha      |
 
-> Height is calculated automatically to maintain the original aspect ratio. Images smaller than the target width are **not** upscaled (`withoutEnlargement: true`).
+> **Fallback format**: The script inspects each image for an alpha channel. Transparent images get a **PNG** fallback (`compressionLevel: 8`), opaque images get a **JPEG** fallback (`quality: 85, mozjpeg: true`). AVIF and WebP variants are always generated since both formats natively support transparency.
 
 **Example:** An input file `hero.jpg` (2400×1600) produces:
 

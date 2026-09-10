@@ -55,9 +55,16 @@ const RESIZE_OPTS_1X = { width: TARGET_WIDTH_1X, withoutEnlargement: true };
 async function processImage(filePath) {
   const basename = path.basename(filePath, path.extname(filePath));
   const originalSize = fs.statSync(filePath).size;
-  const { width, height } = await sharp(filePath).metadata();
+  const { width, height, hasAlpha } = await sharp(filePath).metadata();
 
-  console.log(`  Processing: ${basename} (${width}×${height}) ...`);
+  // Determine fallback format based on transparency
+  const fallbackSuffix = hasAlpha ? '-1x.png' : '-1x.jpg';
+  const fallbackPipeline = hasAlpha
+    ? sharp(filePath).resize(RESIZE_OPTS_1X).png({ compressionLevel: 8 })
+    : sharp(filePath).resize(RESIZE_OPTS_1X).jpeg({ quality: 85, mozjpeg: true });
+
+  const alphaLabel = hasAlpha ? ', alpha' : '';
+  console.log(`  Processing: ${basename} (${width}×${height}${alphaLabel}) ...`);
 
   const variants = [
     {
@@ -77,8 +84,8 @@ async function processImage(filePath) {
       pipeline: sharp(filePath).resize(RESIZE_OPTS_1X).webp({ quality: 85, effort: 6 }),
     },
     {
-      suffix: '-1x.jpg',
-      pipeline: sharp(filePath).resize(RESIZE_OPTS_1X).jpeg({ quality: 85, mozjpeg: true }),
+      suffix: fallbackSuffix,
+      pipeline: fallbackPipeline,
     },
   ];
 
@@ -93,6 +100,7 @@ async function processImage(filePath) {
     name: basename,
     dimensions: `${width}×${height}`,
     originalSize,
+    fallbackSuffix,
     ...results,
   };
 }
@@ -100,15 +108,22 @@ async function processImage(filePath) {
 // ─── Summary table ───────────────────────────────────────────────────
 
 function printSummaryTable(rows) {
+  // Determine fallback column header dynamically
+  const hasMixedFallbacks = new Set(rows.map(r => r.fallbackSuffix)).size > 1;
+  const fallbackHeader = hasMixedFallbacks
+    ? '1x Fallback'
+    : rows[0].fallbackSuffix === '-1x.png' ? '1x PNG' : '1x JPG';
+  const fallbackKey = 'fallback';
+
   const cols = [
-    { key: 'name',          header: 'Source',      width: 14, align: 'left'  },
-    { key: 'dimensions',    header: 'Dimensions',  width: 12, align: 'left'  },
-    { key: 'originalSize',  header: 'Original',    width: 11, align: 'right' },
-    { key: '-2x.avif',      header: '2x AVIF',     width: 11, align: 'right' },
-    { key: '-2x.webp',      header: '2x WebP',     width: 11, align: 'right' },
-    { key: '-1x.avif',      header: '1x AVIF',     width: 11, align: 'right' },
-    { key: '-1x.webp',      header: '1x WebP',     width: 11, align: 'right' },
-    { key: '-1x.jpg',       header: '1x JPG',      width: 11, align: 'right' },
+    { key: 'name',          header: 'Source',        width: 14, align: 'left'  },
+    { key: 'dimensions',    header: 'Dimensions',    width: 12, align: 'left'  },
+    { key: 'originalSize',  header: 'Original',      width: 11, align: 'right' },
+    { key: '-2x.avif',      header: '2x AVIF',       width: 11, align: 'right' },
+    { key: '-2x.webp',      header: '2x WebP',       width: 11, align: 'right' },
+    { key: '-1x.avif',      header: '1x AVIF',       width: 11, align: 'right' },
+    { key: '-1x.webp',      header: '1x WebP',       width: 11, align: 'right' },
+    { key: fallbackKey,     header: fallbackHeader,   width: 11, align: 'right' },
   ];
 
   const sep = '+' + cols.map(c => '-'.repeat(c.width + 2)).join('+') + '+';
@@ -118,21 +133,26 @@ function printSummaryTable(rows) {
   console.log('|' + cols.map(c => ' ' + pad(c.header, c) + ' ').join('|') + '|');
   console.log(sep);
 
-  const totals = { originalSize: 0 };
-  const suffixes = ['-2x.avif', '-2x.webp', '-1x.avif', '-1x.webp', '-1x.jpg'];
-  suffixes.forEach(s => (totals[s] = 0));
+  const totals = { originalSize: 0, [fallbackKey]: 0 };
+  const fixedSuffixes = ['-2x.avif', '-2x.webp', '-1x.avif', '-1x.webp'];
+  fixedSuffixes.forEach(s => (totals[s] = 0));
 
   for (const row of rows) {
+    // Resolve the fallback size from the row's actual suffix
+    const fallbackSize = row[row.fallbackSuffix] || 0;
+
     const vals = cols.map(c => {
       if (c.key === 'name') return row.name;
       if (c.key === 'dimensions') return row.dimensions;
       if (c.key === 'originalSize') return formatKB(row.originalSize) + ' KB';
+      if (c.key === fallbackKey) return formatKB(fallbackSize) + ' KB';
       return formatKB(row[c.key]) + ' KB';
     });
     console.log('|' + vals.map((v, i) => ' ' + pad(v, cols[i]) + ' ').join('|') + '|');
 
     totals.originalSize += row.originalSize;
-    suffixes.forEach(s => (totals[s] += row[s]));
+    fixedSuffixes.forEach(s => (totals[s] += (row[s] || 0)));
+    totals[fallbackKey] += fallbackSize;
   }
 
   console.log(sep);
@@ -142,6 +162,7 @@ function printSummaryTable(rows) {
     if (c.key === 'name') return 'TOTAL';
     if (c.key === 'dimensions') return '';
     if (c.key === 'originalSize') return formatKB(totals.originalSize) + ' KB';
+    if (c.key === fallbackKey) return formatKB(totals[fallbackKey]) + ' KB';
     return formatKB(totals[c.key]) + ' KB';
   });
   console.log('|' + totalVals.map((v, i) => ' ' + pad(v, cols[i]) + ' ').join('|') + '|');
