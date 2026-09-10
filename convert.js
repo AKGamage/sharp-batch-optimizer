@@ -66,22 +66,31 @@ async function processImage(filePath) {
   const alphaLabel = hasAlpha ? ', alpha' : '';
   console.log(`  Processing: ${basename} (${width}×${height}${alphaLabel}) ...`);
 
+  // AVIF/WebP options — use 4:4:4 chroma for alpha images (logos, graphics)
+  // to preserve sharp edges; omit for photos to keep file sizes smaller.
+  const avifOpts = hasAlpha
+    ? { quality: 65, effort: 8, chromaSubsampling: '4:4:4' }
+    : { quality: 65, effort: 8 };
+  const webpOpts = hasAlpha
+    ? { quality: 85, effort: 6, chromaSubsampling: '4:4:4' }
+    : { quality: 85, effort: 6 };
+
   const variants = [
     {
       suffix: '-2x.avif',
-      pipeline: sharp(filePath).resize(RESIZE_OPTS_2X).avif({ quality: 65, effort: 8 }),
+      pipeline: sharp(filePath).resize(RESIZE_OPTS_2X).ensureAlpha().avif(avifOpts),
     },
     {
       suffix: '-2x.webp',
-      pipeline: sharp(filePath).resize(RESIZE_OPTS_2X).webp({ quality: 85, effort: 6 }),
+      pipeline: sharp(filePath).resize(RESIZE_OPTS_2X).ensureAlpha().webp(webpOpts),
     },
     {
       suffix: '-1x.avif',
-      pipeline: sharp(filePath).resize(RESIZE_OPTS_1X).avif({ quality: 65, effort: 8 }),
+      pipeline: sharp(filePath).resize(RESIZE_OPTS_1X).ensureAlpha().avif(avifOpts),
     },
     {
       suffix: '-1x.webp',
-      pipeline: sharp(filePath).resize(RESIZE_OPTS_1X).webp({ quality: 85, effort: 6 }),
+      pipeline: sharp(filePath).resize(RESIZE_OPTS_1X).ensureAlpha().webp(webpOpts),
     },
     {
       suffix: fallbackSuffix,
